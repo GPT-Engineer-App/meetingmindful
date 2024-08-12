@@ -3,23 +3,27 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useActionItems, useAddActionItem, useToggleActionItem } from "@/lib/api"
 
 const ActionItems = () => {
-  const [actionItems, setActionItems] = useState([]);
   const [newItem, setNewItem] = useState('');
+  const { data: actionItems, isLoading, isError } = useActionItems();
+  const addActionItemMutation = useAddActionItem();
+  const toggleActionItemMutation = useToggleActionItem();
 
   const addActionItem = () => {
     if (newItem.trim()) {
-      setActionItems([...actionItems, { text: newItem, completed: false }]);
+      addActionItemMutation.mutate(newItem);
       setNewItem('');
     }
   };
 
-  const toggleActionItem = (index) => {
-    const updatedItems = [...actionItems];
-    updatedItems[index].completed = !updatedItems[index].completed;
-    setActionItems(updatedItems);
+  const toggleActionItem = (id, completed) => {
+    toggleActionItemMutation.mutate({ id, completed: !completed });
   };
+
+  if (isLoading) return <div>Loading action items...</div>;
+  if (isError) return <div>Error loading action items</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 h-full flex flex-col">
@@ -32,15 +36,18 @@ const ActionItems = () => {
           onChange={(e) => setNewItem(e.target.value)}
           className="flex-grow mr-2"
         />
-        <Button onClick={addActionItem}>Add</Button>
+        <Button onClick={addActionItem} disabled={addActionItemMutation.isPending}>
+          {addActionItemMutation.isPending ? 'Adding...' : 'Add'}
+        </Button>
       </div>
       <ScrollArea className="flex-grow">
-        {actionItems.map((item, index) => (
-          <div key={index} className="flex items-center mb-2">
+        {actionItems.map((item) => (
+          <div key={item.id} className="flex items-center mb-2">
             <Checkbox
               checked={item.completed}
-              onCheckedChange={() => toggleActionItem(index)}
+              onCheckedChange={() => toggleActionItem(item.id, item.completed)}
               className="mr-2"
+              disabled={toggleActionItemMutation.isPending}
             />
             <span className={item.completed ? 'line-through' : ''}>{item.text}</span>
           </div>
